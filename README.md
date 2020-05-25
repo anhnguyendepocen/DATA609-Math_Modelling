@@ -1,1 +1,1 @@
-# DATA609-Math_Modelling
+This repository houses all coded written for Mathematical Modeling Techniques for Data Analytics.
