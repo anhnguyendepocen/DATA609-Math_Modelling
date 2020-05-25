@@ -1,0 +1,180 @@
+---
+title: "CUNY MSDS Data 609"
+author: "Samantha Deokinanan"
+date: "25th April, 2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+---
+
+***
+### Homework #6.1
+
+***
+#### Page 529: #6   
+Find and classify the rest points of the given autonomous system.
+
+$\frac {dx}{dt} = -(y-1)$  
+$\frac {dy}{dt} = x-2$
+
+If simultaneously $\frac {dx}{dt} = 0$ and $\frac {dy}{dt} = 0$, then $x=2$ and $y=-1$. Thus, (2,1) is the only rest point of the system.
+
+To classify the rest point, let's solve the differential equations:
+
+$\frac {dx}{dy} = \frac {\frac {dx}{dt}}{\frac {dy}{dt}} = \frac {-(y-1)}{x-2}$
+
+$\int {-(y-1)} dy = \int {x-2} dx \rightarrow - \frac {y^2}{2} + y + c_y = \frac {x^2}{2} - 2x + c_x$
+
+$- \frac {y^2}{2} + y - \frac {x^2}{2} + 2x + c = 0$
+
+$y^2 - 2y + x^2 - 4x + c = 0$
+
+Using (2,1) to solve for c:
+
+$(1)^2 - 2(1) + (2)^2 - 4(2) = -c$   
+$c = 5$
+
+Now, solve for y:
+
+$y^2 - 2y + x^2 - 4x + 5 = 0$
+
+$y^2 -2y = -x^2 + 4x - 5$
+
+$(y-1)^2 - 1 = -x^2 + 4x - 5$
+
+$(y-1)^2 = -x^2 + 4x - 4$
+
+$y = 1 \pm \sqrt{-x^2 + 4x - 4}$
+
+The solutions to y are complex roots, this means the rest point is unstable.
+
+***
+#### Page 566: #1   
+
+Use Euler's method to solve the first-order system subject to the specified initial condition. Use the given step size $\Delta t$ and calculate the first three approximations $(x_1; y_1), (x_2; y_2),$ and $(x_3; y_3)$. Then repeat your calculations for $\frac {\Delta t} {2}$. Compare your approximations with the values of the given analytical solution.
+
+$\frac {dx}{dt} = 2x + 3y$   
+$\frac {dy}{dt} = 3x + 2y$   
+
+$x(0) = 1, y(0) = 1, \Delta t = \frac {1}{4}$    
+$x(t) = \frac {1}{2}e^{-t} + \frac {1}{2}e^{5t}$   
+$y(t) = -\frac {1}{2}e^{-t} + \frac {1}{2}e^{5t}$   
+
+For $\Delta t$, the iteration and the actual value are:
+
+```{r}
+it_fun = function(x0,y0,t0){
+  x = x0;  y = y0;  t = t0
+  for(i in 1:2){
+    t[i+1] = t[i] + 0.25
+    x[i+1] = x[i] + (2*x[i] + 3*y[i])*0.25
+    y[i+1] = y[i] + (3*x[i] + 2*y[i])*0.25
+  }
+  return(data.frame(t,x,y))
+}
+
+it_fun(1,1,0)
+
+actual = function(t0){
+  x = c(); y = c(); t = t0
+  for(i in 1:2){
+    t[i+1] = t[i] + 0.25
+  }
+  for(i in 1:3){
+    x[i] = 0.5* exp(-t[i]) + 0.5*exp(5*t[i])
+    y[i] = -0.5* exp(-t[i]) + 0.5*exp(5*t[i])
+  }
+  return(data.frame(t,x,y))
+}
+
+actual(0)
+
+```
+
+For $\frac {\Delta t}{2}$, the iteration and the actual value are:  
+
+```{r}
+it_fun = function(x0,y0,t0){
+  x = x0;  y = y0;  t = t0
+  for(i in 1:2){
+    t[i+1] = t[i] + 0.125
+    x[i+1] = x[i] + (2*x[i] + 3*y[i])*0.125
+    y[i+1] = y[i] + (3*x[i] + 2*y[i])*0.125
+  }
+  return(data.frame(t,x,y))
+}
+
+it_fun(1,1,0)
+
+actual = function(t0){
+  x = c(); y = c(); t = t0
+  for(i in 1:2){
+    t[i+1] = t[i] + 0.125
+  }
+  for(i in 1:3){
+    x[i] = 0.5* exp(-t[i]) + 0.5*exp(5*t[i])
+    y[i] = -0.5* exp(-t[i]) + 0.5*exp(5*t[i])
+  }
+  return(data.frame(t,x,y))
+}
+
+actual(0)
+```
+
+Comparing the results from the approximation and the given analytical solutions, it is clear that for both $\Delta t$ and $\frac {\Delta t}{2}$, the approximations of x and y resulted to be the same whereas with the actual solution, they differ. More specifically, the actual y values were smaller than the actual x. And while the x approximations have a smaller range of error with the actual x value, the y approximations had a larger error.
+
+***
+### Homework #6.2 
+***  
+#### Page 585: #2
+
+Find the local minimum value of the function:
+
+$f(x,y) = 3x^2 + 6xy + 7y^2 - 2x + 4y$
+
+$\frac{\partial f(x,y)}{\partial x} = 6x + 6y - 2 = 0$
+
+$\frac{\partial f(x,y)}{\partial y} = 6x + 14y + 4 = 0$
+
+Solving using substitution,
+
+$6x + 6y - 2 = 0$    
+$y = \frac{2 - 6x}{6}$    
+$6x + 14(\frac{2 - 6x}{6}) + 4 = 0$  
+$6x + \frac {28}{6} - \frac {84x}{6} + 4 = 0$  
+$36x + 28 - 84x + 24 = 0$  
+$-48x + 52 = 0$  
+$x = \frac{13}{12}$  
+
+As a result,   
+
+$y = \frac{2 - 6(\frac{13}{12})}{6}$  
+$y = -\frac{3}{4}$  
+
+Therefore, when $(x,y) = (\frac {13}{12}, - \frac {3}{4})$, the local minimum is $f(x,y) = -\frac{31}{12}$. 
+
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Week 11 - 12/3dplot.jpg)
+
+***
+#### Page 599: #5 
+
+One of the key assumptions underlying the models developed in this section is that the harvest rate equals the growth rate for a sustainable yield. The reproduction submodels in Figures 13.19 and 13.22 suggest that if the current population levels are known, it is possible to estimate the growth rate. The implication of this knowledge is that if a quota for the season is established based on the estimated growth rate, then the fish population can be maintained, increased, or decreased as desired. This quota system might be implemented by requiring all commercial fishermen to register their catch daily and then closing the season when the quota is reached. 
+
+*Discuss the difficulties in determining reproduction models precise enough to be used in this manner.*
+
+Such models are delicate, over-simplistic modelling can result in the collapse of species. It takes exhaustive, and often expensive research, and experience and morality to get it right. With an estimated growth rate, if there is larger than expected error, harvest can result in a negative net growth rate when the population is low. If the errors are small, strict guidelines are necessary to ensure harvest rate match or be lower than growth rate, and all regional and provincial goals for the species, management and politicians influences should not override statistical facts. Therefore, it is difficult to the estimate how of the harvesting and reproduction rates compare to determine whether the population will naturally increase or decrease because it is a complicated business and decisions are not likely to satisfy all. 
+
+
+*How would you estimate the population level?*
+
+An intensive investigation will be needed in order for a species population level to be estimated. In the case of a fish species, one method that could be used to estimate the population level is a standardized sampling where there are identical sampling methodologies carried out during the same set of environmental conditions in the same manner over a period of time. Another method for assessing a fish population would include establishing simple aquatic systems. This would allow for seemingly controlled environments where the species can naturally thrive and thoroughly studied. There are few barriers to interbreeding in controlled systems and the population parameters are common to the given species.
+
+*What are the disadvantages of having a quota that varies from year to year?* 
+
+With a quota that varies, every decision will have to be adjusted accordingly. This would affect companies staffing and capitalization of resources used for fishing that particular species. Moreover, if the quota is ever larger than the biological optimum population level, there is a risk of reaching the minimum population which can cause the species driven to extinction.
+
+*Discuss the practical political difficulties of implementing such a procedure.*
+
+Sound science should guide assessments of species status, not politics. This model is meant to maximize profit without depleting the species. This power to control a species, or as politics typically sees any business, a source of profit, inevitable leads to over-harvesting since the economic will be thriving more than the actual fish population. Moreever, if more than one country is sourcing from the same fishery, conflicts can arise if one country refuse to follow guidelines even with sound reasons, for instance, the need for food during a difficult time. The difficult situation is understandable, but is it worth the extinction of a species?
+

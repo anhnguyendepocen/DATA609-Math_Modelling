@@ -1,0 +1,287 @@
+---
+title: "CUNY MSDS Data 609"
+author: "Samantha Deokinanan"
+date: "2nd March, 2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+---
+
+***
+### Homework 3.1  
+
+***
+
+#### Problem #1, pg 232
+
+Consider a stereo with CD player, FM-AM radio tuner, speakers (dual), and power amplifier (PA) components, as displayed with the reliabilities shown in Figure. Determine the system's reliability. What assumptions are required in your model?
+
+![](C:/Users/Samantha Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Done/Week 5 - 6/pic1.jpg)
+
+From the figure, we have that:
+
+$R_{PA}(t) = 0.95$ is the reliability for the PA.  
+$R_{CD}(t) = 0.98$ is the reliability for the CD.  
+$R_{FM-AM}(t) = 0.97$ is the reliability for the FM-AM Radio.  
+$R_{S1}(t) = 0.99$ is the reliability for the Speaker 1.  
+$R_{S2}(t) = 0.99$ is the reliability for the Speaker 2.  
+
+The assumption for this model is that there are three components in a series system with the last two of these components being parallel systems, such that:
+
+For component 1, ie $R_{1}(t)$, the reliability is $R_{PA}(t) = 0.95$.    
+For component 2, ie $R_{2}(t)$, the reliability is $R_{CD}(t) + R_{FM-AM}(t) - R_{CD}(t) \times R_{FM_AM}(t) = 0.98 + 0.97 - 0.98*0.97 = 0.9994$.    
+For component 3, ie $R_{3}(t)$, the reliability is $R_{S1}(t) + R_{S2}(t) - R_{S1}(t) \times R_{S2}(t) = 0.99 + 0.99 - 0.99*0.99 = 0.9999$.  
+
+Thus, the system reliability is $R_{1}(t) \times R_{2}(t) \times R_{3}(t) = (0.95)(0.9994)(0.9999) = 0.9493$.  
+
+***
+#### Problem #2, pg 240
+
+Use the basic linear model $y = ax + b$ to fit the following data sets. Provide the model, provide the values of $SSE, SSR, SST,$ and $R^2$, and provide a residual plot. 
+
+Question 2: Predict weight as a function of the cube of the height.
+
+The model is $weight = a \times height^3 + b$. Fitting the data to the model such that:
+
+$a=\frac {m\sum {{xy} -\sum {x} \sum {y}}}{m\sum {{x}^{2}-{\left(\sum{x}  \right)}^{2}}}$
+
+$b=\frac {\sum {{x^2} {\sum {y}} -\sum {xy} \sum {x}}}{m\sum {{x}^{2}-{\left(\sum{x}  \right)}^{2}}}$
+
+where m = 21.
+
+```{r}
+height = c(60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80)
+weight = c(132, 136, 141, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 201, 206, 212, 218, 223, 229, 234)
+
+# The model, y = ax^3 + b
+df = data.frame(height^3, weight)
+
+df$xy = df$height*df$weight
+df$x2 = df$height.3^2
+
+sum = data.frame(colSums(df))
+sum
+
+m = 21
+
+a = (m*sum[3,]-(sum[1,]*sum[2,]))/(m*sum[4,]-(sum[1,])^2)
+b = ((sum[4,]*sum[2,])-(sum[3,]*sum[1,]))/(m*sum[4,]-(sum[1,])^2)
+
+c(a, b)
+```
+
+Thus, the model is $weight = 0.000347 height^3 + 59.5$. Now, the following formulas are used to find the values of SSR, SSE and SST:
+
+$SSE=\sum _{i=1}^{m}{\left( {y}_{i}-\left({ax}_{i}+b \right)  \right)^{2}}$
+
+$SST=\sum _{i=1}^{m}{ \left( {y}_{i}-\bar {{y}_{i}} \right) ^{2}}$ 
+
+$SSR = SST - SSE$
+
+The coefficient of determination can be calculated using $R^2 = 1 - \frac {SSE}{SST}$.
+
+```{r}
+SSE = 0
+SST = 0
+for (i in c(1:21)){
+  SSE = SSE + (df$weight[i] - (a*df$height.3[i] + b))^2 
+  SST = SST + (df$weight[i] - mean(df$weight))^2
+  SSR = SST - SSE
+}
+
+R2 = 1 - SSE/SST
+
+data.frame(SSE = SSE, SST = SST, SSR = SSR, R2 = R2)
+```
+
+Using the model, a plot of the residual suggest that there is a scatter with no large differences between the actual and fitted data.
+
+```{r}
+predicted = 0.000347* height^3 + 59.5
+
+residuals = weight - predicted
+
+plot(weight, residuals)
+abline(0, 0)
+title("Plot of the residuals")
+```
+
+***
+### Homework #3.2 
+
+***  
+#### Problem #2, pg 251
+
+_Nutritional Requirements_ - A rancher has determined that the minimum weekly nutritional requirements for an average-sized horse include 40 lb of protein, 20 lb of carbohydrates, and 45 lb of roughage. These are obtained from the following sources in varying amounts at the prices indicated:
+
+
+| |Protein (lb)|Carbohydrates (lb)|Roughage (lb)|Cost|
+--|--|--|--|--|
+Hay (per bale) | 0.5 |2.0| 5.0| $1.80|
+Oats (per sack) | 1.0| 4.0 |2.0 |$3.50|
+Feeding blocks (per block)|2.0| 0.5| 1.0 |$0.40|
+High-protein concentrate (per sack) |6.0 |1.0| 2.5| $1.00|
+Requirements per horse (per week) |40.0 |20.0| 45.0||
+
+Formulate a mathematical model to determine how to meet the minimum nutritional requirements at minimum cost.
+
+_Problem Identification_ : How should the rancher ration protein, carbohydrates and roughage to meet the minimum weekly nutritional requirements for an average-sized horse at a minimum cost?
+
+_Decision variables_ :
+
+* $x_1$ = pounds of hay  
+* $x_2$ = pounds of oats  
+* $x_3$ = pounds of feeding blocks  
+* $x_4$ = pounds of high-protein concentrate  
+
+_Problem_ : Minimize the model for cost , $cost = 1.80 x_1 + 3.50 x_2 + 0.40 x_3 + x_4$.
+
+_Constraints_:
+
+* (protein)  $0.5 x_1 + x_2 + 2.0 x_3 + 6.0 x_4 \ge 40.0$  
+* (carbohydrates) $2.0 x_1 + 4.0 x_2 + 0.5 x_3 + x_4 \ge 20$  
+* (roughage) $5.0 x_1 + 2.0 x_2 + x_3 + 2.5 x_4 \ge 45$  
+
+where $x_1,x_2,x_3,x_4 \ge 0$.
+
+Checking the properties for optimization of a linear program, it is clear that this problem satisfy all 5 assumption. Specifically, there is a unique objective function, the cost function that is a linear expression representing the weekly cost of nutritional requirements for an average-size horse. All the decision variables appear only as a power term with an exponent of 1. There are no term in the cost function or in the constraints that is a product of the decision variables. Each constraint are constant and in the objective function. And lastly, the decision variables are permitted to assume fractional or integer values.
+
+This problem mirrors that on the Investment Problem in the textbook on page 249. Specifically, Goal 1, trying to meet a yearly return of at least $5000, while all the constraints remains. Thus, this problem too can be solve using Simplex Method as a good method of optimization to obtain a solution.
+
+Let's solve this problem using Simplex algorithm.
+```{r message=FALSE, warning=FALSE}
+library(linprog)
+library(lpSolve)
+
+obj = c(1.8, 3.5, 0.4, 1)
+bvec = c(40, 20, 45)
+constraints = rbind(c(0.5, 1, 2, 6), c(2, 4, 0.5, 1), c(5, 2, 1, 2.5))
+solveLP(obj, bvec, constraints, const.dir =  c(">=", ">=", ">=" ), maximum = FALSE)
+```
+
+The results show that the optimal minimizer is c(5, 0, 20, 0), which equates to $17, while also meeting the nutritional constraints such that 42.5 lb of protein, 20 lb of carbohydrates, and 45 lb of roughage can be purchased.
+
+***
+#### Problem #6, pg 264
+
+Using graphical analysis, maximize $10x + 35y$, subject to:
+
+* $8x + 6y \le 48$ (board-feet of lumber)
+* $4x + y = 20$ (hours of carpentry)
+* $y \ge 5$ (demand)
+* $x, y > 0$ (non-negativity)
+
+Now, let's use the very powerful `ggplot2` for the graphical analysis using the following rearranged constraints:
+
+* $y = - \frac {4}{3}x +8$   
+* $y = -4x + 20$  
+* $y = 5$  
+* $x = 0$  
+
+With the constraints, there are a few assumption on the solution. Firstly, with the non-negative constraints on x and y, the solution must be in the first quadrant of the Cartesian plane and $y ≥ 5$. Moreover, $y = - \frac {4}{3}x +8$ constraint further suggest the solution is below this line. Thus, the solution can be found within the region highlighted in the light-blue area of the graph.
+
+```{r}
+library(ggplot2)
+
+intersection = data.frame(x = c(0, 0, 2.25), y = c(5, 8, 5))
+
+ggplot(data.frame(x = c(-1, 7)), aes(x)) + 
+  stat_function(fun = function(x) -4/3*x + 8, geom = "line", aes(col = 'y = -4/3x + 8')) +
+  stat_function(fun = function(x) -4*x + 20, geom = "line", aes(col = 'y = -4x + 20')) +
+  stat_function(fun = function(x) 5, geom = "line", aes(col = 'y = 5')) + 
+  geom_point(data = intersection, aes(x, y)) + 
+  geom_polygon(data = intersection, aes(x = x, y = y), fill="lightblue") + 
+  annotate('text', x = 0, y = 9, label="(0, 8)", size = 3 ) +
+  annotate('text', x = 0, y = 4, label="(0, 5)", size = 3 ) + 
+  annotate('text', x = 2.25, y = 4, label="(2.25, 5)", size = 3 ) + 
+  labs(title = 'Graphical Representation of the Constraints') 
+```
+
+Now that the intersection have been found. The optimal solution that maximize $10x + 35y$ is (0, 8) with a value of 280.
+
+```{r}
+obj.func = function(x,y) 10*x + 35*y
+data.frame(x = c(0, 0, 2.25), y = c(5, 8, 5), 
+           obj_func = c(obj.func(0, 5), obj.func(0, 8), obj.func(2.25, 5)))
+```
+
+***
+#### Problem #3, pg 295
+
+Use the curve-fitting criterion to minimize the sum of the absolute deviations for the following models and data set:
+
+* $y = ax$
+* $y = ax^2$
+* $y = ax^3$
+
+To minimize the function $\Sigma {|y_i - y(x_i)|}$, let's use the golden search method with a tolerance level of 0.01, and initial interval of [0, 42]. 
+
+```{r}
+golden.search = function(f, x, y, a, b, t) {
+  iteration = 0
+  r = 0.618
+  # Test points
+  x1 = b - r * (b - a)
+  x2 = a + r * (b - a)
+  # Evaluate f(x) at each test point
+  f1 = f(x1, x, y)
+  f2 = f(x2, x, y)
+  # Algorithm to select new interval
+  while (abs(b - a) > t) {
+    iteration = iteration + 1
+    if (f2 >= f1) {
+      b = x2
+      x2 = x1
+      f2 = f1
+      x1 = b - r * (b - a)
+      f1 = f(x1, x, y)
+    } else {
+      a = x1
+      x1 = x2
+      f1 = f2
+      x2 = a + r * (b - a)
+      f2 = f(x2, x, y)
+    }
+  }
+  cat("Final lower bound =", a, "\n")
+  cat("Final upper bound =", b, "\n")
+  cat("Optimal x that minimizes the function is", (a + b) / 2, "which evaluates to", f((a + b) / 2, x, y), "\n")
+}
+```
+
+Part A: $y = ax$
+
+Minimize: $f(c) = |8 - 7c| + |41 - 14c| + |133 - 21c| + |250 - 28c| + |280 - 35c| + |297 - 42c|$
+
+```{r}
+x = c(7, 14, 21, 28, 35, 42)
+y = c(8, 41, 133, 250, 280, 297)
+
+f1 = function(xi, x, y){
+  sum(abs(y - xi*(x)))
+}
+golden.search(f1, x, y, 0, 42, t = 0.01)
+```
+
+Part B: $y = ax^2$
+
+Minimize: $f(c) = |8 - 7^2c| + |41 - 14^2c| + |133 - 21^2c| + |250 - 28^2c| + |280 - 35^2c| + |297 - 42^2c|$
+
+```{r}
+f1 = function(xi, x, y){
+  sum(abs(y - xi*(x)^2))
+}
+golden.search(f1, x, y, 0, 42, t = 0.01)
+```
+
+Part C: $y = ax^3$
+
+Minimize: $f(c) = |8 - 7^3c| + |41 - 14^3c| + |133 - 21^3c| + |250 - 28^3c| + |280 - 35^3c| + |297 - 42^3c|$
+
+```{r}
+f1 = function(xi, x, y){
+  sum(abs(y - xi*(x)^3))
+}
+golden.search(f1, x, y, 0, 42, t = 0.01)
+```

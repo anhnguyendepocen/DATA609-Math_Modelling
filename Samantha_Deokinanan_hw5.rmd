@@ -1,0 +1,309 @@
+---
+title: "CUNY MSDS Data 609"
+author: "Samantha Deokinanan"
+date: "28th March, 2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+---
+
+***
+### Homework 5.1  
+
+***
+#### Page 404: #2 a   
+Build a linear programming model for each player's decisions and solve them both geometrically and algebraically. Assume the row player is maximizing his/her payoffs which are shown in the matrices below.
+
+```{r echo=FALSE}
+cat('        |  Colin
+        | C1   C2
+------------------        
+Rose R1 | 10   10    
+     R2 |  5    0')
+```
+
+Modeling The Decisions
+
+Rose's strategy is to win only if Colin loses. Rose uses strategies R1 and R2 to maximize her payoff, while Colin uses strategies C1 and C2 to minimize his loss. Let's define the variable as follows:
+
+A - Rose's winnings  
+B - Colin's winnings  
+x - the portion of time playing strategy R1  
+y - the portion of time playing strategy C1  
+(1-x) - the portion of time playing strategy R2  
+(1-y) - the portion of time playing strategy C2  
+
+*Objection Function*: Rose's objective is to maximize A while Colin's objective is to minimize B.
+
+*Constraints* : The objective functions are subject to:
+
+```{r echo=FALSE}
+cat('     Rose          |      Colin
+---------------------------------------
+A ≤ 10x + 5(1 - x) | B ≥ 10y + 10(1-y)
+     A ≤ 10x       |       B ≥ 5y
+     0 ≥ x - 1     |     0 ≤ y ≤ 1')
+```
+
+##### Solving The Decision Models Geometrically
+
+```{r warning=FALSE}
+library(ggplot2)
+intersections = data.frame(x = c(0,0,1), y = c(0,5,10))
+
+A = ggplot(data.frame(x = c(0,1)), aes(x)) + 
+  stat_function(fun = function(x) 10*x + 5*(1-x), geom = "line", aes(col = "C1: 10x + 5(1-x)")) +
+  stat_function(fun = function(x) 10*x, geom = "line", aes(col = "C2: 10x")) +
+  geom_vline(xintercept = 0, aes(col = "x = 0")) +
+  geom_vline(xintercept = 1, aes(col = "x = 1")) + 
+  geom_point(data = intersections, aes(x,y)) + 
+  
+  annotate('text', x = 0.95, y = 10.5, label = "(1,10)", size = 3) +
+  annotate('text', x = 0.05, y = 4.8, label = "(0,5)", size = 3) +
+  annotate('text', x = 0.05, y = -0.2, label = "(0,0)", size = 3) +
+  annotate('text', x = 0.05, y = 12.5, label = "x = 0", size = 3) +
+  annotate('text', x = 0.95, y = 12.5, label = "x = 1", size = 3) + 
+  labs(title = "Graphical Analysis for Decisions by Rose", y = "A")
+
+intersections = data.frame(x = c(0,0,1,1,2), y = c(0,10,5,10,10))
+
+B = ggplot(data.frame(x = c(0,2)), aes(x)) + 
+  stat_function(fun = function(x) 10, geom = "line", aes(col = "R1: 10")) +
+  stat_function(fun = function(x) 5*x, geom = "line", aes(col = "R2: 5x")) +
+  geom_vline(xintercept = 0, aes(col = "y = 0")) +
+  geom_vline(xintercept = 1, aes(col = "y = 1")) + 
+  geom_point(data = intersections, aes(x,y)) + 
+  
+  annotate('text', x = 0.08, y = 10.5, label = "(0,10)", size = 3) +
+  annotate('text', x = 0.94, y = 10.5, label = "(1,10)", size = 3) + 
+  annotate('text', x = 1.94, y = 10.5, label = "(2,10)", size = 3) +
+  annotate('text', x = 0.94, y = 5.20, label = "(1,5)", size = 3) + 
+  annotate('text', x = 0.08, y = -0.05, label = "(0,0)", size = 3) +
+  annotate('text', x = 0.08, y = 12.5, label = "y = 0", size = 3) +
+  annotate('text', x = 0.94, y = 12.5, label = "y = 1", size = 3) + 
+
+  labs(title = "Graphical Analysis for Decisions by Colin", y = "B", x = 'y')
+
+A
+B
+```
+
+The value of the game is 10. From Rose's decision plot, A takes a maximum value of 10 when x = 1, that is when Rose plays strategy R1 100% of the time. Whereas, Colin can play strategy C1 between 0% to 100% of the time and the minimum value of B is also equal to 10, no matter what y is equal to.
+
+##### Sensitivity Analysis
+Let's look in terms of sensitivity analysis by examining both graphs. Take Rose's decision graph, for example, if Rose does not play her optimal strategy R1 100% of the time, Colin can opt for strategy C2 to minimize his loss. Since there is no mix of events for Colin from his perspective, his best option remains the same.
+
+##### Solving The Decision Models Algebraically   
+
+In this problem, there are four constraints, therefore, there are six possible ways of intersecting four distinct constraints two at a time. But there are two parallels, one for Rose and Colin each. Therefore, there are only five intersection points for each model's decision.
+
+For Rose's decision with Colin's strategies, $x \geq 0$ and $x \geq 1$ is the parallel, and by setting x = 0 and x = 1, the intersection can be determined:
+
+```{r echo = FALSE}
+cat('    x = 0  | x = 1
+-------------------
+R1: A = 5  | A = 10
+R2: A = 0  | A = 10')
+```
+
+The fifth intersection is found by solving the two constraints when they equal to each other:
+
+Constraint 1 : $10x + 5(1-x)$  
+Constraint 2 : $10x$  
+
+When constraint 1 = constraint 2,
+
+$10x + 5(1-x) = 10x$  
+$5x + 5 = 10x$  
+$5 = 5x$  
+$x = 1$  
+
+Therefore, x = 1 and the value of the game is 10. Now, testing each intersection point to determine which are feasible and evaluating Rose's objective function at each point, we have:
+
+```{r echo = FALSE}
+cat('  x  |  A  | Feasible
+----------------------
+  0  |  5  | No
+  1  | 10  | Yes
+  0  |  0  | Yes
+  1  | 10  | Yes
+  1  | 10  | Yes')
+```
+
+Choosing the feasible point with the best value for the objective function, we have x = 1, and A = 10.
+
+For Colin's decision with Rose's strategies, $y \geq 0$ and $y \geq 1$ is the parallel, and by setting y = 0 and y = 1, the intersection can be determined:
+
+```{r echo = FALSE}
+cat('    y = 0  | y = 1
+-------------------
+C1: B = 10 | B = 10
+C2: B = 0  | B = 5')
+```
+
+The fifth intersection is found by solving the two constraints when they equal to each other:
+
+Constraint 1: $10y+ 10(1-y)$  
+Constraint 2: $5y$  
+
+When constraint 1 = constraint 2,
+
+$10y + 10(1-y) = 5y$  
+$10 = 5y$  
+$y = 2$  
+
+Therefore, y = 2 and the value of the game is 10. Once again, testing each intersection point to determine which are feasible and evaluating Colin's objective function at each point, we have:
+
+```{r echo = FALSE}
+cat('  y  |  B  | Feasible
+----------------------
+  0  | 10  | Yes
+  1  | 10  | Yes
+  0  |  0  | No
+  1  |  5  | No
+  2  | 10  | No')
+```
+
+Choosing the feasible point with the minimal value for the objective function, we have y = 2, and B = 10.
+
+***
+#### Page 420: #1
+
+Use the maximin and minimax method and the movement diagram to determine if any pure strategy solutions exist. Assume the row player is maximizing his/her payoffs.
+
+```{r echo=FALSE}
+cat('        |    Colin
+        | C1      C2
+---------------------        
+Rose R1 | 10 <--> 10 
+        |  ^      ^
+        |  |      |
+     R2 |  5 ---> 0')
+```
+
+Note that the row minimums are {10,0}, and the column maximums are {10,10}. This suggests that Rose's maxi-min value is 10 and Colin's mini-max value is also 10. These are saddle points since they are equal. The two saddle points correspond to strategies R1, C1 and R1, C2. Thus, a pure strategy exists when Rose plays R1 while Colin plays either C1 or C2.
+
+***
+#### Page 454: #3
+
+Doc Holliday versus Ike Clanton (2-person, 3-strategy game) is used in this problem. On October 26, 1881, the bad blood between the Earps, Clantons, and McLaurys came to a head at the O.K. Corral. Billy Clanton, Frank McLaury, and Tom McLaury were killed. Doc Holliday, Virgil, and Morgan Earp were injured. Miraculously, Wyatt Earp was unharmed, while the unarmed Isaac "Ike" Clanton survived by running away. Many people believed that Doc Holliday shotgunned an unarmed Tom McLaury in the back as he was attempting to flee the scene.  
+
+Ike Clanton and his friends and associates, known as the "cowboys," swore to get their revenge on the Earps and Holliday. In the ensuing months, Morgan Earp was murdered and Virgil Earp seriously wounded in an ambush. A few days later, Wyatt Earp apparently shot and killed Frank Stillwell, a Clanton associate, and another man believed to be involved in the ambush. Over the next few years, many more of the cowboys were killed. 
+
+Although close to death from tuberculosis, in 1887 Doc Holliday decided to look up Ike Clanton and to settle their differences once and for all. On June 1, 1887, Doc Holliday and J. V. Brighton cornered Ike Clanton near Springerville, Arizona. Doc told J.V. to stay out of it for the time being.  
+
+Ike and Doc each had a pistol and shotgun. Ike and Doc, spurning their pistols in favor of their shotguns, pressed forward toward each other. At long range, Ike -- with his cowboy background -- was a better shot than Doc. At middle range, Doc -- the seasoned gun fighter -- could outgun Ike. Both desperadoes were deadly at close range. The probabilities that either rogue would kill the other with a blast from his single-shot shotgun appear in the following table:
+
+```{r echo=FALSE}
+cat('                         Kill Probability
+------------------------------------------------------
+             | Long Range | Middle Range | Close range
+Ike Clanton  |    0.5     |    0.6       |    1.0
+Doc Holliday |    0.3     |    0.8       |    1.0')
+```
+
+In this problem, the payoff to Doc is 10 units if Doc survives and Ike is killed, -10 units if Doc is killed and Ike survives. Doc and Ike's strategies are as follows:
+
+```{r echo=FALSE}
+cat('----------------------------------------------------------------------------------
+L |                                      Blast at long range.
+----------------------------------------------------------------------------------
+M | If enemy has not shot, blast at middle range; otherwise, blast at close range.
+C | Blast enemy at close range.')
+```
+
+Compute the payoff matrix for Doc Holiday and solve the game.
+
+The expected values for Ike and Doc are as follow:
+
+```{r echo=FALSE}
+cat('                                Expected Values
+-------------------------------------------------------------------------
+                                  Ike Clanton
+-------------------------------------------------------------------------
+             |   Long Range   |   Middle Range  |   Close range   | E(V)
+Ike Clanton  | 0.5*(-10) = -5 |  0.6*(-10) = -6 | 1.0*(-10) = -10 | -21
+Doc Holliday |   0.3*10 = 3   |   0.8*10 = 8    |   1.0*10 = 10   |  21
+-------------------------------------------------------------------------
+
+Now construct the payoff matrix with either the EV or probabilities:
+
+                                                  Kill Payoff Probability
+---------------------------------------------------------------------------------------------------------------
+                                                         Ike Clanton
+---------------------------------------------------------------------------------------------------------------
+             |   |         Long Range        |           Middle Range          |          Close range
+             | L |     0.3 - 0.5 =  -0.2     |  (0.3)*0 + (1-0.3)*(-1) = -0.7  | (0.3)*0 + (1-0.3)*(-1) = -0.7
+Doc Holliday | M | (0.8)*0 + (1-0.8)*(0) = 0 |         0.8 - 0.6 = 0.2         |   (0.8)*1 + (1-0.8)*(-1) = 0.6
+             | C |  (1.0)*0 + (1-1)*(0) = 0  |  (1-0.6)*(1) + 0.6*(-1) = -0.2  |       1.0 - 1.0 = 0.0
+---------------------------------------------------------------------------------------------------------------
+
+Multiple with the winning units of the game from the perspective of Doc Holliday, and find the minimax:
+
+                                       Payoffs
+-------------------------------------------------------------------------------
+                                     Ike Clanton
+-------------------------------------------------------------------------------
+             |   | Long Range | Middle Range | Close range | Row Max
+             | L |     -2     |      -7      |     -7      |   -2 
+Doc Holliday | M |      0     |       2      |      6      |    6  mini-max = -2
+             | C |      0     |      -2      |      0      |    0
+-------------------------------------------------------------------------------             
+Col Min      |   |     -2     |      -7      |     -7      |          
+                  maxi-min = -2')
+```
+
+From the results, note that this mixed strategy game is symmetrical since Ike and Doc choose their strategies simultaneously. Furthermore, notice that Doc's M strategy is dominating over L and C, and the expected payoff is higher regardless of what Ike does. With this symmetrical game, Ike's payoff matrix will be the negative of Doc's payoffs, making his dominating strategy L because L dominates strategies M and C in his favor given that Doc chooses strategy M. 
+
+But this game is also a zero-sum game since the payoffs for all players in each outcome sum to zero. From Doc's perspective, he is playing to survive while avoiding risk to himself. Therefore, if Doc doesn't make any assumption on what Ike's move will be, but only for his reward to be maximized, the best worst-case strategy over Ike's is found using the minimax theorem. As a result, the strategies, in this case, is {DL, IL} and the value of the game is -2, i.e. the payoff when Doc and Ike both choose the long-range strategy. 
+
+***
+### Homework #5.2 
+
+***  
+#### Page 478: #6
+Suggest other phenomena for which the Prescribing Drug Dosage model described in the text might be used.
+
+The phenomena describe a degradation model with effect limitations, where high concentration can be unsafe while low concentration is not as effective, thus the decaying process needs to be properly timed to maintain the effectiveness. 
+
+During my undergraduate year, I had conducted a research project that can mirror this Prescribing Drug Dosage model. It was based on chlorine decay in drinking water due to the reaction with dissolved organic matter. Chlorine is commonly used for disinfecting drinking water due to its low cost and ability to sustain a disinfectant residual throughout the system. But there are issues within such a system. To maintain the desired level of chlorine residual, a high dose is introduced at the entry of the system. This will result in odd taste or odor for closer consumers and will require re-chlorination at intermediate locations to subdue the initial dose. On one end, the chlorine dose and residual should be kept low to restrict dissolved organic matter accumulation. While on the other end, a sufficient chlorine residual is necessary to protect against contamination. 
+
+It is not a straightforward analysis. Like with any chemical reaction rate, the temperature can greatly influence it. Moreover, water systems typically have a mixture of different water sources and treatment plants. As such, each stream contains different concentrations of chlorine and so, the overall concentration changes. Therefore, optimizing the chlorine dose within a water system is not only a problem that accounts for chemical decay, dosage amount, and dosage interval, but also distance, type of water, temperature, and other properties of the water and its system structure to ensure a safe concentration equilibrium is always achieved.
+
+***
+#### Page 522: #22  
+
+If the average person breathes 20 times per minute, exhaling each time 100 $in^3$ of air containing 4% carbon dioxide. Find the percentage of carbon dioxide in the air of a 10,000-$ft^3$ closed room 1 hr after a class of 30 students enters. Assume that the air is fresh at the start, that the ventilators admit 1000 $ft^3$ of fresh air per minute, and that the fresh air contains 0.04% carbon dioxide.
+
+Let P represents the percentage of $CO_2$ in the air at any time and let t represents the time in minutes. 
+
+The conditions of the initial setting include:  
+- The fresh air contains 0.04% $CO_2$.  
+- (30 students will exhale) x (20 times a min) x (in a $\frac {100 in^3}{12^3}$ room), ie 34.72 $ft^3 / min$.  
+- ventilators remove (1000 $ft^3$) x (P-0.0004) $CO_2$
+
+Therefore, the equilibrium would be:  
+$34.72(0.04 − P) = 1000(0.0004 − P)$
+ 
+Expanding to over 60 min and solve for p:
+
+$\frac {dP}{dt} = (1000)(0.0004 - P) + (34.72)(0.04 - P) = 1.789 - 1034.72P$
+
+$\int_{0.0004}^{p}\frac{1}{1.789 - 1034.722P}dP = \int_{0}^{60} 1dt$
+
+$\frac {ln(|1.789 - 1034.72 \times 0.0004|)} {−1034.72} − \frac {ln(|1.789 − 1034.722 \times p|)}  {−1034.722} = 60$
+
+$ln(\frac {|1.789 − 1034.722 \times 0.0004|} {|1.789 − 1034.722 \times p|}) = 60$
+
+$\frac {|1.789 − 1034.722 \times 0.0004|} {|1.789 − 1034.722 \times p|} = exp(60)$
+
+$\frac {|1.789 − 1034.722 \times 0.0004|}{exp(60)} = |1.789 − 1034.722 \times p|$ 
+
+$1.204 \times 10^{−26} = |1.789 − 1034.722 \times p|$  
+
+$p = 0.00173$  
+
+This indicates that at t = 60 min, there is about 4.3 times $CO_2$ in the air than the initial conditions, i.e. 0.173% of $CO_2$.
+
+

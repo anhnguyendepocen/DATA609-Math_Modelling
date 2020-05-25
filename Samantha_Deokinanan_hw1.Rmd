@@ -1,0 +1,202 @@
+---
+title: 'CUNY MSDS Data 609'
+author: "Samantha Deokinanan"
+date: "8th February, 2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '4'
+---
+
+***
+
+### Homework 1.1
+
+***  
+#### Problem 9, pg 17
+
+The data in the accompanying table show the speed *n* (in increments of 5 mph) of an automobile and the associated distance $a_{n}$ in feet required to stop it once the brakes are applied. For instance, n = 6 (representing 6 x 5 = 30 mph) requires a stopping
+distance of $a_{6} = 47 ft$. 
+
+a. Calculate and plot the change $\Delta a_{n}$ versus n. Does the graph reasonably approximate a linear relationship?
+b. Based on your conclusions in part (a), find a difference equation model for the stopping distance data. Test your model by plotting the errors in the predicted values against n. Discuss the appropriateness of the model.
+
+```{r message=FALSE, warning=FALSE}
+n = c(1:16)
+an = c(3, 6, 11, 21, 32, 47, 65, 87, 112, 140, 171, 204, 241, 282, 325, 376)
+
+# Part A: Plot of delta a_n vs n
+delta_a = c(NA, tail(an, -1) - head(an, -1))
+
+library(ggplot2)
+ggplot(data = data.frame(n,delta_a), aes(x = n, y = delta_a)) + geom_smooth() + geom_point(shape = 21, color = "black", fill = "tomato", size = 2) + ggtitle("delta_a vs n")
+```
+
+The graph does appear to have an approximate linear relationship since most of the data points lie on the straight line.
+
+```{r}
+# Part B: Difference equation model
+k = (delta_a[13]-delta_a[4]) / (n[13]-n[4]) # slope of the line
+k
+```
+
+Finding the slope of the line, we are able to find the difference equation model. Now, testing the model by plotting the errors in the predicted values against n.
+
+```{r message=FALSE, warning=FALSE}
+predicted = k
+
+for (i in seq(2, 16)){
+  predicted[i] = k*(i - 1) + predicted[i - 1]
+}
+
+error = an - predicted
+data.frame(n, an, predicted, error)
+ggplot(data = data.frame(n,error), aes(x = n, y = error)) + geom_smooth() + geom_point(shape = 21, color = "black", fill = "tomato", size = 2) + ggtitle("Error vs n : y = kx")
+```
+
+From the plot, it is clear that as speed increases the difference in the predicted with the actual (ie the error) of the stopping distance increases. With such a wide span in the residuals, in addition to points falling outside the confidence area, this model is not a good fit. Moreover, a polynomial fit seems more appropriate, as shown below.
+
+```{r message=FALSE, warning=FALSE}
+n2 = n^2
+k = (delta_a[13]-delta_a[3]) / (n2[13]-n2[3])
+predicted = k
+
+for (i in seq(2, 16)){
+  predicted[i] = k*(i - 1) + predicted[i - 1]
+}
+
+error = an - predicted
+ggplot(data = data.frame(n,error), aes(x = n, y = error)) + geom_smooth() + geom_point(shape = 21, color = "black", fill = "tomato", size = 2) + ggtitle("Error vs n : y = kx^2")
+```
+
+***
+#### Problem 6, pg 55
+
+An economist is interested in the variation of the price of a single product. It is observed that a high price for the product in the market attracts more suppliers. However, increasing the quantity of the product supplied tends to drive the price down. Over time, there is an interaction between price and supply. The economist has proposed the following model, where $P_n$ represents the price of the product at year n, and $Q_n$ the quantity. Find the equilibrium values for this system.
+
+$P_{n+1} = P_n − 0.1(Q_n−500)$  
+$Q_{n+1} = Q_n + 0.2(P_n−100)$
+
+a. Does the model make sense intuitively? What is the significance of the constants 100 and 500? Explain the significance of the signs of the constants -0.1 and 0.2.
+
+b. Test the initial conditions in the following table and predict the long-term behavior.
+
+|   |Price|Quantity|
+|---|-----|--------|
+|Case A | 100 | 500
+|Case B | 200 | 500
+|Case C | 100 | 600
+|Case D | 100 | 400
+
+
+*Part 1 & A: Equilibrium values and the System*
+
+Call (P,Q) the equilibrium values. Given that,
+
+$P_{n+1} = P_n − 0.1(Q_n−500)$  
+$Q_{n+1} = Q_n + 0.2(P_n−100)$
+
+Substituting in the system yields:
+
+$P = P − 0.1(Q−500)$  
+$Q = Q + 0.2(P−100)$
+
+or
+
+$0 = -0.1(Q−500) \rightarrow Q = 500$  
+$0 = 0.2(P−100) \rightarrow P = 100$
+
+With these equilibrium, the model is that with high quantity, there is a negative impact on price, while when there is a high price, there is a positive influence on quantity. The significance of the constants is that when the quantity supply is more than 500, the price will increase in the next year, and if the quantity is less than 500, the price will decrease. Similarly, when the price > $100, quantity will increase, and when price < \$100, quantity will decrease.
+
+The constants -0.1 and 0.2 suggest that price decreases by $0.10 for each unit supplied, while quantity increases by 0.2 units for every \$1 increase in price.
+
+*Part B: Test of initial condition*
+
+```{r}
+P_min = function(P, Q) {
+    return (P - (0.1 * (Q - 500)))
+}
+
+Q_min = function(P, Q) {
+    return (Q + (0.2 * (P - 100)))
+}
+
+cases = function(P0, Q0, n) {
+    P = P0
+    Q = Q0
+    for (i in 1:n) {
+       P[i + 1] = P_min(P[i], Q[i])
+       Q[i + 1] = Q_min(P[i], Q[i])
+    }
+    return (data.frame(n = seq(1:(n+1)), price = P, quantity = Q))
+}
+
+ggplot(cases(100,500,100), aes(n)) + geom_line(aes(y = price, colour = "Price")) + geom_line(aes(y = quantity, colour = "Quantity")) + ggtitle("Case A")
+
+ggplot(cases(200,500,100), aes(n)) + geom_line(aes(y = price, colour = "Price")) + geom_line(aes(y = quantity, colour = "Quantity")) + ggtitle("Case B")
+
+ggplot(cases(100,600,100), aes(n)) + geom_line(aes(y = price, colour = "Price")) + geom_line(aes(y = quantity, colour = "Quantity")) + ggtitle("Case C")
+
+ggplot(cases(100,400,100), aes(n)) + geom_line(aes(y = price, colour = "Price")) + geom_line(aes(y = quantity, colour = "Quantity")) + ggtitle("Case D")
+```
+
+*Case A*: There is no change since both price and quantity are at their equilibrium.
+
+*Case B*:  Price is above its equilibrium thus quantity will increase. Price will then steadily increase and eventually decrease as the quantity increase. Notice that when quantity drops below its equilibrium, price will begin to increase again.
+
+*Case C*: Quantity is above its equilibrium thus price will decrease. Notice again that when the quantity eventually hits its equilibrium, price increases.
+
+*Case D*: Quantity is below its equilibrium thus price will increase. The price and quantity increases until they both hit their equilibrium. Then, price starts to decrease.
+
+***
+
+### Homework 1.2
+
+***
+#### Problem 11, pg 79
+
+Determine whether the data set supports the stated proportionality model.
+
+$y \propto x^3$ if and only if $y=kx^3$. Let's find the ratio of $y/x^3$ to identify for the proportionality.
+
+```{r}
+y = c(0, 1, 2, 6, 14, 24, 37, 58, 82, 114)
+x = c(1:10)
+
+prop = y/x^3
+
+k = mean(prop)
+k
+
+predicted = k * x^3
+
+data = data.frame(x, "Actual" = y, "Predicted" = predicted)
+
+ggplot(data, aes(x)) + geom_line(aes(y = y, colour = "Actual")) + geom_line(aes(y = predicted, colour = "Predicted")) + ggtitle("Actual vs Predicted, y = 0.096x^3")
+```
+
+In the plot above, the model was a close fit for the first few values, however the prediction becomes poor just after x = 4. Thus, let's recalculate the proportion for x > 4.
+
+```{r}
+k = mean(y[5:length(y)]/x[5:length(x)]^3)
+
+predicted = k * x^3
+
+data = data.frame(x, "Actual" = y, "Predicted" = predicted)
+
+ggplot(data, aes(x)) + geom_line(aes(y = y, colour = "Actual")) + geom_line(aes(y = predicted, colour = "Predicted")) + ggtitle("Actual vs Predicted, y = 0.112x^3")
+```
+
+From this plot, there is a much closer fit for the data set. Thus, it is appropriate to say that the proportionality is well-suited
+
+***
+#### Problem 2, pg 104
+
+Tests exist to measure the percentage of body fat. Assume that such tests are accurate and that a great many carefully collected data are available. You may specify any other statistics, such as waist size and height, that you would like collected. Explain how the data could be arranged to check the assumptions underlying the sub-models in this section. For example, suppose the data for males between ages 17 and 21 with constant body fat and height are examined. Explain how the assumption of constant density of the inner core could be checked.
+
+
+Based on the data set at hand, the creation of subsets can be used to test whether variables such as the constant density of the inner core is true. That is, grouping individuals with similar measurements particularly height and weight, that is their geometric similarities. Other variables such as age, fitness level, daily activeness, skin thickness, and even calculated variables such as body mass index can be considered when creating subsets. With these subsets and all the sub-models proposed (i.e. $W_{in} = k_2h^3$ and $W_{out} = k_3h^2 + k_4h^3$), a test of proportionality can be conducted since volume is proportional to cubic height which can then in turn solve for density for a group with common measurements. Statisitically, linear fitting and correlations testings can be the best way to determining whether the assumptions of the sub-models are valid predictors.
+
+
+
+

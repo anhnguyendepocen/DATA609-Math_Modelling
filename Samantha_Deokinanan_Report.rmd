@@ -1,0 +1,811 @@
+---
+output:
+  html_document:
+    toc_depth: 3
+---
+***
+
+<div align = "center">
+*Optimizing Commercial Airlines Flight Networks by utilizing Graph Theory and Network Analysis.*  
+________________________  
+Samantha Deokinanan  
+CUNY MSDS DATA 609.01 Final Project  
+May 24th, 2020  
+</div>
+
+***
+### Introduction 
+***
+
+According to the Federal Aviation Administration’s Air Traffic Organization, at any given moment, there are about 5000 commercial airplanes in the sky over the United States. With such number, at the end of 2019, a total of $36.5 billion have been spent on jet fuel for both domestic and international flights from the United States, as reported by the Bureau of Transportation Statistics. Airline activities create an extremely complex and dynamic flight network structure, and these carriers must plan their schedules accordingly with the influences of numerous factors such as weather conditions, number of assigned seats, distance, transfers, etc. Because of this, analyzing airline transportation networks has been an ongoing problem with the interest of optimizing the best connections based on the constraints, while also minimizing delays due to its negative impacts, mainly economic, for passengers, airlines, and airports. These findings have been evolving airline networks into various profitable types – namely, hub-and-spoke, tour, sub-tour and direct, – and their comparisons have been well-documented (Sternberg, et al, 2017, Farrahi, et al, 2017, Kalliguddi, et al, 2017). 
+
+The task of managing flights at an airport, or the airport ground movement problem as it is often called, is in principal a routing and scheduling problem. The objective is to ensure that at any given time no two flights must conflict with one another. Moreover, working with a smaller airport that has fewer active flights during peak hours, one can rely on simpler algorithms for finding the optimal routing as opposed to larger airports where more complex ones are needed. Therefore, the purpose of this project is to investigate the complex network of commercial airline flights using network analysis and graph theory to reflect a typical airline’s network structure and suggest strategies of flight as related to intrinsic constraints and economic conditions for the specific airline. Specifically, the focus of this project is to investigate the following:   
+
+1.    Finding the shortest path between any two airports given multiple time constraints of specific flights.  
+2.    Understanding flight demand for the perspective of carriers and passengers and determining which routes can maximize profitability.  
+3.    Further optimizing profitability and timeliness by testing rerouted flights and changing flight schedules. 
+
+***
+### Limitations
+***
+
+The U.S. Department of Transportation’s Bureau of Transportation Statistics tracked the on-time performance of domestic flights operated by large air carriers in 2015. This dataset has over 5.8 million observations. Unfortunately, outdated equipment did not allow for high-speed data processing of this capacity. Because of this, data reduction was necessary, and so the time frame of the data changed from one year to 3 months. Specifically, the data was divided to utilized flight dates that fell within the Summer, i.e. 20th June to 22nd September since it is typically one of busiest period to traveling other than the Christmas holiday.
+
+***
+### Methodology   
+***
+
+The aim of routing and scheduling flights at an airport is often to reduce the overall travel time of flights, reduce the number of canceled flights, or increase the overall punctuality of flights, while simultaneously reducing the environmental impact of the industry. Often these problems can be solved by modelling a transportation network as a graph where edge weights depict constraints on the corresponding connection, and the best connection is typically computed by Dijkstra’s algorithm. But with the addition of the route network topographies, this project aims to also reduce other impactful constraints such as the contributors of delay and the costs of a journey. Therefore, possible approaches to these problems will be presented.  Below is a general overview of main concept this project will be exploring into.
+
+***
+#### Graph Theory
+***
+
+A graph $G = (V,E)$ is a representation of a finite set of vertices $V$, and a finite set of edges $E$ whose elements are unordered pairs of distinct edges $(i, j)$. 
+
+In this project, the edges will have a specified direction. A directed edge $e_{ij}$ is an edge where the vertices $i$ and $j$ are ordered, and it is said that $i$ is the start vertex while $j$ is the end vertex of the edge. In addition to edge directions, edge weights may be associated with each edge. These weights may represent travel distance, travel time, or the importance of one edge over another such as a flight connection.
+
+By ordering a list of such vertices $(v_1, v_2, . . . , v_k)$, there is a formation of a path in the graph, provided that each adjacent pair of vertices is connected by an edge. The notation $x \in G$ denotes $x$ as any point on the graph $G$ (along an edge or at a vertex). A weight or a length may be associated with each edge $v_i, v_j \in E$. 
+
+***
+#### Network Flow 
+***
+
+The shortest path problem is perhaps the simplest instance of all network flow problems. It involves finding the shortest path from one point to another. The length of a path is the distance from the starting point to the end point. More formally, given a directed graph G and two distinct vertices $s, t \in V$. If each edge has some length $c_{ij}$ , find the shortest path from the source vertex s to the sink vertex t.
+
+In this project, the length of a path is the distance from an origin airport to the destination airport, and the edges can be weighted with time it takes to travel, the fuel consumption or the reliability, etc. One can easily see how this model can be applied to finding the shortest can be constantly applied in flight network analyses. Moreover, it should also be noted that the Bellman-Ford algorithm is used. It is an extension of Dijkstra's algorithm which calculates the shortest distance from the source point to all the vertices. While Dijkstra’s algorithm just works for edges with positive weights, the Bellman-Ford algorithm works for negative weights as well. A negative weight can be any time variable, such as an early departure or a late arrival.
+
+***
+### R Packages
+***
+
+Below is a list of all the necessary `R packages` utilized in this project.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(tidyverse)
+library(igraph)
+library(geosphere)
+library(maps)
+library(ggraph)
+library(kableExtra)
+library(linprog)
+library(pracma)
+library(lpSolve)
+library(PairViz)
+```
+
+***
+### Data Description
+***
+
+The U.S. Department of Transportation’s Bureau of Transportation Statistics tracked the on-time performance of domestic flights operated by large air carriers in 2015. This dataset contains summary information on the number of on-time, delayed, cancelled, and diverted flights published in Department’s monthly Air Travel Consumer Report. The dataset was retrieved from kaggle.com on 2nd March 2020.
+
+```{r echo=FALSE}
+cat(
+"Table 1: Variable description of Flights dataset
+------------------------------------------------
+     Variables      |        Description
+------------------------------------------------
+MONTH               | Month of the Flight Trip
+DAY                 | Day of the Flight Trip
+DAY_OF_WEEK         | Day of week of the Flight Trip
+AIRLINE             | Airline Identifier
+FLIGHT_NUMBER       | Flight Identifier
+TAIL_NUMBER         | Aircraft Identifier
+ORIGIN_AIRPORT      | Starting Airport
+DESTINATION_AIRPORT | Destination Airport
+SCHEDULED_DEPARTURE | Planned Departure Time
+DEPARTURE_TIME      | WHEEL_OFF - TAXI_OUT
+DEPARTURE_DELAY     | Total Delay on Departure
+TAXI_OUT            | The time duration elapsed between departure from the origin airport gate and wheels off
+WHEELS_OFF          | The time point that the aircraft's wheels leave the ground
+SCHEDULED_TIME      | Planned time amount needed for the flight trip
+ELAPSED_TIME        | AIR_TIME + TAXI_IN + TAXI_OUT
+AIR_TIME            | The time duration between wheels_off and wheels_on time
+DISTANCE            | Distance between two airports, in miles
+WHEELS_ON           | The time point that the aircraft's wheels touch on the ground
+TAXI_IN             | The time duration elapsed between wheels-on and gate arrival at the destination airport
+SCHEDULED_ARRIVAL   | Planned arrival time
+ARRIVAL_TIME        | WHEELS_ON + TAXI_IN
+ARRIVAL_DELAY       | ARRIVAL_TIME - SCHEDULED_ARRIVAL
+DIVERTED            | Aircraft landed on airport that out of schedule
+CANCELLED           | Flight Cancelled (1 = cancelled)
+CANCELLATION_REASON | Reason for Cancellation of flight: 
+                    |   A - Airline/Carrier; 
+                    |   B - Weather; 
+                    |   C - National Air System; 
+                    |   D - Security
+AIR_SYSTEM_DELAY    | Delay caused by air system
+SECURITY_DELAY      | Delay caused by security
+AIRLINE_DELAY       | Delay caused by the airline
+LATE_AIRCRAFT_DELAY | Delay caused by aircraft
+WEATHER_DELAY       | Delay caused by weather
+------------------------------------------------")
+```
+
+> Preview of Flights, Airlines, and Airports Datasets
+
+*Flights*
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+flights = read.csv("C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/flights.csv/summer_flights.csv")
+names(flights) = tolower(names(flights))
+```
+<div align = "center", style = "height:219px">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/flights.jpg)
+</div>
+
+*Airlines*
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+airlines = read.csv("C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/flights.csv/airlines.csv")
+names(airlines) = tolower(names(airlines))
+kable(airlines) %>% kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+*Airports*
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+airports = read.csv("C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/flights.csv/airports.csv")
+names(airports) = tolower(names(airports))
+kable(head(airports)) %>% kable_styling(bootstrap_options = c("striped","condensed"), full_width = FALSE)
+```
+
+***
+#### The Model Assumptions  
+***
+
+The surface of an airport can be represented as a graph $G = (V, E)$, where $V$ is a set of points and $E$ is a set of directed segments joining these points together. The flight route will be represented by two adjacent points, the origin airport and the destination airport, and an incident directed segment. Associated with every flight $f$, there is a vital set of information used by air traffic controllers to handle the flow of traffic. When moving around on the airport, the path of points and segments a flight $f$ travels along, is called the taxi route of $f$. In this project, both the runway and the gates will be included in the taxi route. Therefore, if the flight $f$ starts off at a gate, and ends in the air, $f$ is called a departure. Otherwise, it is called an arrival. Given that $f$ is a departure, $f$ is said to have taxi out time, which is the time duration elapsed between departure from the origin airport gate and the time point that the aircraft's wheels leave the ground. Looking at an arrival flight $g$, $g$ is said to have taxi in time, which is the time duration between point that the aircraft's wheels touch on the ground and gate arrival at the destination airport.
+
+As the names suggests, an aircraft starts at the origin airport, and time is used for taxiing out and then take-off. Likewise, an aircraft ends at the destination airport, and time is used for landing and taxiing in. It will be assumed that the flights take-off and land in the same direction, and so the entry and exit points will be fixed for all flights. Therefore, the duration of the time that elapsed can be calculated using:
+
+<div align = "center">
+*total elapsed time = taxiing out + airtime + taxiing in*
+</div>
+
+where airtime is the time duration between the moment when the aircraft wheel’s leave the ground and when it touches on the ground.
+
+After a flight has departed, to determine whether that flight has deviated from its schedule, that is whether it is early or late compared to the original plan, deviation is penalized by a cost for each time unit it deviates from the original plan. That is, a flight deviates from its schedule if there is a difference between its planned departure/arrival time, and its actual departure/arrival time. 
+
+Lastly, according to the International Air Transport Association price of jet fuel during the Summer of 2015 were:
+
+```{r echo = FALSE}
+cat('Table 2: Jet Fuel price for Summer, 2015
+----------------------------
+  Month   | Price | Change
+----------------------------
+  June    | $1.73 | - 6.33%
+  July    | $1.55 | -10.57%
+ August   | $1.39 | -10.33%
+September | $1.40 |   0.43%
+----------------------------')
+```
+
+This averages to US\$1.63 per gallon. For this project, it is assumed that the price of jet fuel does not change each month and remains at the average to save on computation progress. 
+
+***
+### Results & Discussion 
+***
+
+A map showing flight routes between airports is a network graph. In an attempt to make the route explicit, the network behind air transport is examined. The structure of the relationships has an impact on the spatial distribution of nodes in a graph and such landscape depicts geographical constraints. The algorithm takes in an airline and a date and filters the dataset accordingly. When there are multiple flights on the same day, the average flight information is taken. Next, geotagging is carried for the origin and destination airport on a map of the United States. The generated network map highlights each domestic flight route specific to an airline made for the given day.  
+
+The following are three examples. Focus is given to United Air Lines Inc, JetBlue Airways, and Skywest Airlines Inc, all selected at random. At the end of each year, each airline releases a report on their services, this would include their fleet sizes. Thus, in 2015, there were 1239, 215, and 348 aircrafts, respectively. Knowledge of fleet size allows for better analysis and interpretation of distinguishable networks based on airlines' services. For instance, a greater fleet size would suggest more flights and a more complex network graph. However, this is not always the case. Below the network structures of Skywest Airlines which has a smaller fleet is compared to United Air Lines which has a larger fleet. They look drastically different.
+
+United Air Lines network spans the United States with a majority of flights to the Northeast and Southeast along the Atlantic and the Midwest, whereas Skywest dominates the Midwest, Pacific, and Mountain Regions. Skywest is capable of covering more edges of the United States with a small fleet, capturing the demands of small domestic flights in which United Air Lines choose not to target. The short distances enable flights to travel to their destinations and back, and one aircraft can be scheduled for multiple flights within a given day. This is not to say one strategy is better than the next. United Air Lines' structure would suggest more direct flights, targeting further distance domestic flights, and having a larger fleet will provide increased flights to the same destinations. Both airline network structures depict plausible reasoning behind the fleet size.
+
+> Flight Network for United Air Lines Inc. on June 20th, 2015
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# United Air Lines
+UA = flights[,-c(1,6,7,10,11,14:15,19,21,22,24:31)] %>% filter(month == 6 & day == 20 & airline == 'UA') %>% group_by(origin_airport, destination_airport) %>% summarise_each(funs(mean))
+UA = UA[,-c(3:6)]
+
+UA1 = data.frame(UA$origin_airport); UA2 = data.frame(UA$destination_airport)
+names(UA1)= "iata_code"; names(UA2)= "iata_code"
+data1 = left_join(UA1, airports, "iata_code") 
+data2 = left_join(UA2, airports, "iata_code") 
+
+UA = data.frame(UA, data1[,c(6:7)], data2[,c(6:7)])
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+plot_connection = function(dep_lon, dep_lat, arr_lon, arr_lat, ...){
+    inter = gcIntermediate(c(dep_lon, dep_lat), c(arr_lon, arr_lat), n = 50, addStartEnd = TRUE, breakAtDateLine = FALSE)     
+    inter = data.frame(inter)
+    diff_of_lon = abs(dep_lon) + abs(arr_lon)
+    if(diff_of_lon > 180){
+        lines(subset(inter, lon>=0), ...)
+        lines(subset(inter, lon<0), ...)
+    }else{
+        lines(inter, ...)
+    }
+}
+
+# Background map
+par(mar = c(0,0,0,0))
+map('state', col="grey", fill = TRUE, bg = "white", lwd = 0.05, mar = rep(0,4), border = 0)
+ 
+# Connections
+for(i in 1:nrow(df[,c(9:12)])){
+    plot_connection(UA$longitude[i], UA$latitude[i], UA$longitude.1[i], UA$latitude.1[i], col = "lightseagreen", lwd = 1)
+  }
+ 
+# Add points and names of cities
+points(x = UA$longitude, y = UA$latitude, col = "slateblue", cex = 2, pch = 20)
+text(UA$origin_airport, x = UA$longitude, y = UA$latitude,  col = "slateblue", cex = 1, pos = 4)
+```
+
+<div align = "center">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/unitedairline.jpeg)
+</div>
+
+> Flight Network for Skywest Airlines Inc. on June 20th, 2015
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# Skywest Airlines Inc.
+OO = flights[,-c(1,6,7,10,11,14:15,19,21,22,24:31)] %>% filter(month == 6 & day == 20 & airline == 'OO') %>% group_by(origin_airport, destination_airport) %>% summarise_each(funs(mean))
+OO = OO[,-c(3:6)]
+
+OO1 = data.frame(OO$origin_airport); OO2 = data.frame(OO$destination_airport)
+names(OO1)= "iata_code"; names(OO2)= "iata_code"
+data1 = left_join(OO1, airports, "iata_code") 
+data2 = left_join(OO2, airports, "iata_code") 
+
+OO = data.frame(OO, data1[,c(6:7)], data2[,c(6:7)])
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Background map
+par(mar = c(0,0,0,0))
+map('state', col="grey", fill = TRUE, bg = "white", lwd = 0.05, mar = rep(0,4), border = 0)
+ 
+# Connections
+for(i in 1:nrow(OO[,c(9:12)])){
+    plot_connection(OO$longitude[i], OO$latitude[i], OO$longitude.1[i], OO$latitude.1[i], col = "lightseagreen", lwd = 1)
+  }
+ 
+# Add points and names of cities
+points(x = OO$longitude, y = OO$latitude, col = "slateblue", cex = 2, pch = 20)
+text(OO$origin_airport, x = OO$longitude, y = OO$latitude,  col = "slateblue", cex = 1, pos = 4)
+```
+
+<div align = "center">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/skywest.jpeg)
+</div>
+
+> Flight Network for JetBlue Airways on June 20th, 2015
+
+In contrast, the network structures of JetBlue are mainly concentrated to the Eastern region bordering the Atlantic, with minimal flights to the Pacific and other regions. Overall, JetBlue fleet size is small, and as a result, it is transparent why a preponderance of domestic flights are short distances, and long-distance flights are to International airports solely.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# JetBlue Airways
+B6 = flights[,-c(1,6,7,10,11,14:15,19,21,22,24:31)] %>% filter(month == 6 & day == 20 & airline == 'B6') %>% group_by(origin_airport, destination_airport) %>% summarise_each(funs(mean))
+B6 = B6[,-c(3:6)]
+
+B61 = data.frame(B6$origin_airport); B62 = data.frame(B6$destination_airport)
+names(B61)= "iata_code"; names(B62)= "iata_code"
+data1 = left_join(B61, airports, "iata_code") 
+data2 = left_join(B62, airports, "iata_code") 
+
+B6 = data.frame(B6, data1[,c(6:7)], data2[,c(6:7)])
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Background Map
+par(mar = c(0,0,0,0))
+map('state', col="grey", fill = TRUE, bg = "white", lwd = 0.05, mar = rep(0,4), border = 0)
+ 
+# Connections
+for(i in 1:nrow(B6[,c(9:12)])){
+    plot_connection(B6$longitude[i], B6$latitude[i], B6$longitude.1[i], B6$latitude.1[i], col = "lightseagreen", lwd = 1)
+  }
+ 
+# Add points and names of cities
+points(x = B6$longitude, y = B6$latitude, col = "slateblue", cex = 2, pch = 20)
+text(B6$origin_airport, x = B6$longitude, y = B6$latitude,  col = "slateblue", cex = 1, pos = 4)
+```
+
+<div align = "center">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/jetblue.jpeg)
+</div>
+
+***
+#### Analysis of Flight Times 
+***
+
+Having visualized flight network structures at a much grander scale and abstraction for some airlines, analysis can now be conducted to investigate the shortest path and maximum flow problem flight networks typically solve.
+
+It is essential to note that distance is not an attribute for these problems because the representation of time equates to a more realistic comprehension of a conventional traveling problem. That is, distance is independent of the time needed to travel from an origin to a destination since one can traverse the same distance faster or slower, and this is dependent on other factors. Hence, recall that the duration of the time that elapsed for a flight from an origin airport to the destination airport can be calculated using:
+
+<div align = "center">
+*total elapsed time = taxiing out + airtime + taxiing in*
+</div>
+
+The shortest path problem is perhaps the simplest instance of all network flow problems. The problem is set-up such that the edges can be weighted with time it takes to travel from an origin to a destination. With the Bellman-Ford algorithm, negative weights can be considered as opposed to using Dijkstra's algorithm. Therefore, given a directed graph G, two distinct vertices are selected as source and sink, $s, t \in V$, i.e. the origin and destination airports, each edge has a weight $c_{ij}$ which is the total elapsed time, and the goal is to find the shortest path from the source vertex s to the sink vertex t. With the same directed graph setup, the next objective involves finding the maximum flow from the origin airport to the destination airport. For feasibility, conservation of flow is required at each vertex except the source and sink, and each flow must be less than or equal to its capacity. 
+
+***
+##### Shortest Path based on Elapsed Time
+***
+
+The algorithm starts with a connected flight graph $G$, an origin airport is chosen, and find a spanning tree $T \subset E$. The algorithm then looks at elapsed time $e_{ij} \notin T$ to see if adding this time to $T$, and removing a time $e_{uv} \in T$ from $T$, results in a directing of flow which is less time consuming than before. However, just randomly searching for a time to add and remove is very inefficient, and so the method ensures efficiency since the time $e_{ij}$ entering $T$ must be an unfeasible time. This algorithm will return an error if no scheduled flight meets the criteria for that specific day.
+
+Querying United Air Lines, JetBlue Airways and Skywest Airlines schedule on 20 June 2015, the arbitrary aims are to find the shortest path from:
+
+* Gen. Edward Lawrence Logan International Airport (BOS) to Chicago O'Hare International Airport (ORD), and  
+* Dallas/Fort Worth International Airport (DFW) to Louis Armstrong New Orleans International Airport (MSY). 
+
+The results below highlight that there were direct flights from BOS to ORD for each airline, thus representing the shortest path based on the duration of the total time elapsed. Conversely, there are no direct flights from DFW to MSY, and each airlines' path includes an intermediate stop, i.e. Denver International Airport (DEN), Logan International Airport (BOS), and George Bush Intercontinental Airport (IAH).
+
+> Shortest Path for United Air Lines Inc. on June 20th, 2015
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+variable = UA$elapsed_time
+UA_connect = data.frame(from = UA$origin_airport, to = UA$destination_airport, value = variable)
+
+# Create a graph object
+UA_mygraph = simplify(graph.data.frame(UA_connect, directed = TRUE))
+
+# United Air Lines
+# Example 1: BOS to ORD
+UA_BOS_to_ORD = get.shortest.paths(UA_mygraph, from = 'BOS', to = 'ORD', weights = UA_mygraph$value, output = 'both')
+UA_BOS_to_ORD$vpath
+
+# Example 2: DFW to MSY
+UA_DFW_to_MSY = get.shortest.paths(UA_mygraph, from = 'DFW', to = 'MSY', weights = UA_mygraph$value, output = 'both')
+UA_DFW_to_MSY$vpath
+```
+
+> Shortest Path for JetBlue Airways on June 20th, 2015
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+variable = B6$elapsed_time
+B6_connect = data.frame(from = B6$origin_airport, to = B6$destination_airport, value = variable)
+
+# Create a graph object
+B6_mygraph = simplify(graph.data.frame(B6_connect, directed = TRUE))
+
+# JetBlue Airways
+# Example 1: BOS to ORD
+B6_BOS_to_ORD = get.shortest.paths(B6_mygraph, from = 'BOS', to = 'ORD', weights = B6_mygraph$value, output = 'both')
+B6_BOS_to_ORD$vpath
+
+# Example 2: DFW to MSY
+B6_DFW_to_MSY = get.shortest.paths(B6_mygraph, from = 'DFW', to = 'MSY', weights = B6_mygraph$value, output = 'both')
+B6_DFW_to_MSY$vpath
+```
+
+> Shortest Path for Skywest Airlines Inc. on June 20th, 2015
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+variable = OO$elapsed_time
+OO_connect = data.frame(from = OO$origin_airport, to = OO$destination_airport, value = variable)
+
+# Create a graph object
+OO_mygraph = simplify(graph.data.frame(OO_connect, directed = TRUE))
+
+# Skywest Airlines
+# Example 1: BOS to ORD
+OO_BOS_to_ORD = get.shortest.paths(OO_mygraph, from = 'BOS', to = 'ORD', weights = OO_mygraph$value, output = 'both')
+OO_BOS_to_ORD$vpath
+
+# Example 2: DFW to MSY
+OO_DFW_to_MSY = get.shortest.paths(OO_mygraph, from = 'DFW', to = 'MSY', weights = OO_mygraph$value, output = 'both')
+OO_DFW_to_MSY$vpath
+```
+
+An in-depth comparison of the resulting shortest path from these three airlines implies that even though there are non-stops flight from BOS to ORD, United Air Lines was able to arrive 30 minutes before the other two airlines. The data further shows that this was a consequence of earlier taxiing out from BOS, and earlier taxiing into ORD. Examining the flights from DFW to MSY, Skywest had the most feasible path based on the total elapsed time. This is studied more closely below.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+cat('Table 3: Routes of the shortest path from three airlines
+------------------------------------------------------------
+       Airline        |  Best Route   |      Best Route
+                      |  BOS to ORD   |      DFW to MSY
+------------------------------------------------------------
+United Air Lines Inc. |  BOS --> ORD  |  DFW --> DEN --> MSY
+JetBlue Airways       |  BOS --> ORD  |  DFW --> BOS --> MSY
+Skywest Airlines Inc. |  BOS --> ORD  |  DFW --> IAH --> MSY
+------------------------------------------------------------
+                      | Direct Flight |  Connected Flights
+------------------------------------------------------------
+
+')
+
+cat('Table 4: Elapsed time (in minutes) of the shortest path from three airlines
+------------------------------------------------------------------------
+       Airline        | Elapsed time  |         Elapsed time
+                      |  BOS to ORD   |          DFW to MSY
+------------------------------------------------------------------------
+United Air Lines Inc. |    106.33     |  (109.25 + 150.50) = 259.75
+JetBlue Airways       |    130.75     |  (206.00 + 201.00) = 407.00
+Skywest Airlines Inc. |    135.00     |  ( 67.50 +  64.00) = 131.50
+------------------------------------------------------------------------
+                      | Direct Flight |  Connected Flights
+------------------------------------------------------------------------')
+```
+
+A flight network for these airlines out of Dallas/Fort Worth International Airport is presented. It is shown that none of these airlines have a direct connection to Louis Armstrong New Orleans International Airport. Mapping their paths further sets into perspective why each airline has such varying elapsed time. Jetblue Airways clocked in 407 minutes because its only connection to MSY is via BOS, while Skywest Airlines clocked in 131.50 minutes via IAH, which is much closer to MSY.
+
+> Flight Network on June 20th, 2015 at DFW by three Airlines
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# Create the dataframe
+UA_connect_DFW = UA_connect[which(UA_connect$from == "DFW"),]
+B6_connect_DFW = B6_connect[which(B6_connect$from == "DFW"),] 
+OO_connect_DFW = OO_connect[which(OO_connect$from == "DFW"),]
+airname = c(rep('United',nrow(UA_connect_DFW)), rep('JetBlue',nrow(B6_connect_DFW)), rep('Skywest', nrow(OO_connect_DFW)))
+connect_DFW = cbind(rbind(UA_connect_DFW,B6_connect_DFW,OO_connect_DFW), airname)
+
+# Create a graph object
+mygraph_DFW = simplify(graph.data.frame(connect_DFW, directed = TRUE))
+E(mygraph_DFW)$color = as.factor(connect_DFW$airname)
+
+# Plot network
+set.seed(525)
+plot(mygraph_DFW, layout = layout_with_dh,
+     edge.width = 2,
+     vertex.label.cex = 1, 
+     vertex.label.family = "Helvetica",
+     vertex.label.font = 2,
+     vertex.shape = "circle", 
+     vertex.size = 1, 
+     vertex.label.color = "black")
+
+legend("bottomleft", legend=levels(as.factor(connect_DFW$airname)), col = c('orange1', 'steelblue1', 'seagreen'), bty = "n", pch=20 , pt.cex = 3, cex = 1, text.col=c('orange1', 'steelblue1', 'seagreen') , horiz = FALSE, inset = c(0.1, 0.1))
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Create the dataframe
+UA_DFW = UA[c(101,84),]
+B6_DFW = B6[c(87,40),] 
+OO_DFW = OO[c(161,260),]
+airname = c(rep('United',nrow(UA_DFW)), rep('JetBlue',nrow(B6_DFW)), rep('Skywest', nrow(OO_DFW)))
+con_DFW = cbind(rbind(UA_DFW,B6_DFW,OO_DFW), airname)
+
+# Create the map
+par(mar = c(0,0,0,0))
+map('state', col="grey", fill = TRUE, bg = "white", lwd = 0.05, mar = rep(0,4), border = 0)
+ 
+# Connections
+for(i in 1:2){
+    plot_connection(con_DFW$longitude[i], con_DFW$latitude[i], con_DFW$longitude.1[i], con_DFW$latitude.1[i], col = "lightseagreen", lwd = 2)
+}
+for(i in 3:4){
+    plot_connection(con_DFW$longitude[i], con_DFW$latitude[i], con_DFW$longitude.1[i], con_DFW$latitude.1[i], col = "hotpink2", lwd = 2)
+}
+for(i in 5:6){
+    plot_connection(con_DFW$longitude[i], con_DFW$latitude[i], con_DFW$longitude.1[i], con_DFW$latitude.1[i], col = "blue2", lwd = 2)
+  }
+ 
+# Add points and names of cities
+points(x = c(con_DFW$longitude, -90.25803), y = c(con_DFW$latitude, 29.99339), col = "slateblue", cex = 2, pch = 20)
+text(con_DFW$origin_airport, x = con_DFW$longitude, y = con_DFW$latitude,  col = "slateblue", cex = 1, pos = 4)
+text('MSY', x = -90.25803, y = 29.99339,  col = "slateblue", cex = 1.5, pos = 4)
+
+legend("bottomleft", legend=levels(as.factor(con_DFW$airname)), col = c('hotpink2', 'blue2','lightseagreen'), bty = "n", pch=20 , pt.cex = 3, cex = 1, text.col=c('hotpink2', 'blue2','lightseagreen') , horiz = FALSE, inset = c(0.1, 0.1))
+```
+
+<div align = "center">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/DFW_connection.jpeg)
+</div>
+
+This is a minuscule representation of how the shortest path algorithm can be implemented to flight networks. Today's flight sorters and ticketing facilities are equipped with more robust processes in determining the best flights out of millions and across a spectrum of dates. Such an algorithm needs to be fast, and adaptive. They are necessary because they enable customers to efficiently schedule their trips.  
+
+***
+##### Maximun Flow for the Time Spent at a Location
+***
+
+Suppose one wishes to travel from $JFK$ to $LAX$ within a fixed time frame, and along the way be able to visit some relatives. Their goal is to maximize their time spent, therefore no direct flight from $JFK$ to $LAX$ is necessary. Using the nearest airport to a relative and having ranked which relatives they wish to see, a directed graph can be created as shown below. The capacity constraint is the time (in minutes) at must be spent at each relatives', i.e. the total time elapsed due to the flight and an additional 8 hours of relaxation at the relative. This description constitutes a maximum flow problem which involves finding a feasible flow through a single-source, single-sink flow network that is the maximum.
+
+> Directed graph of possible places to visit, and time capacity
+
+<div align = "center">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/MAXFLOW.jpg)
+</div>
+
+Recall that for linear programming, the solution to this problem that maximizes the objective equation with constraints is:
+
+*Objective Function*:  
+<div align = "center">
+maximize: $c_1x_1 + c_2x_2 + ... + c_nx_n$  
+i.e. an optimization variable, $x$, and a cost variable, $c$.  
+</div>
+
+*Constraint Functions*:   
+<div align = "center">
+$a_{11}x_1 + a_{12}x_2 + ... + a_{1n}x_n \geq b_1$   
+$a_{21}x_1 + a_{22}x_2 + ... + a_{2n}x_n \geq b_2$   
+$...$  
+$a_{m1}x_1 + a_{m2}x_2 + ... + a_{mn}x_n \geq b_m$   
+</div>
+
+Here, the use of the Simplex Method is applied to solve the problem, and the formulation is as follows:
+
+*Objective function* : maximize the flow from `origin` $s$ to `destination` $t$, i.e. 
+<div align = "center">
+$max(x_{sa} + x_{sb})$  
+</div>
+
+*Flow link variables*: 
+<div align = "center">
+$x_{ij} =$ amount of flow from $i \rightarrow j$    
+</div>
+
+*Flow capacity constraints*: The flow over any link cannot be greater than the elapse time (in minutes) plus an additional 8 hours of stay time at that link, i.e.   
+
+<div align = "center">
+JFK to MCO: $x_{sa}\leq 653$  
+JFK to CVG: $x_{sb}\leq 626$  
+MCO to CVG: $x_{ab}\leq 617$  
+MCO to CNY: $x_{ac}\leq 978$  
+CVG to CNY: $x_{bc}\leq 826$  
+CVG to BRO: $x_{bd}\leq 807$  
+CNY to BRO: $x_{cd}\leq 1083$  
+CNY to LAX: $x_{ct}\leq 799$  
+BRO to LAX: $x_{dt}\leq 870$  
+</div>
+
+*Flow conservation equation*:
+<div align = "center">
+$\forall$ vertex n $\neq {s, t}: \sum flow_{in} = \sum flow_{out}$
+</div>
+
+* vertex a: $x_{sa} = x_{ab} + x_{ac}$
+* vertex b: $x_{sb} + x_{ab} = x_{bc} + x_{bd}$
+* vertex c: $x_{ac} + x_{bc} = x_{cd} + x_{ct}$
+* vertex d: $x_{bd} + x_{cd} = x_{dt}$
+
+```{r message=FALSE, warning=FALSE}
+obj = c(1,0,0,1,0,0,0,0,0)
+constraints = matrix(c(1,-1,-1,0,0,0,0,0,0,
+                       0,1,0,1,-1,-1,0,0,0,
+                       0,0,1,0,1,0,-1,-1,0,
+                       0,0,0,0,0,1,1,0,-1), 4, 9, byrow = TRUE)
+
+bvec = c(0,0,0,0)
+upperbound = c(653,626,617,978,826,807,1083,799,870)
+linprog(obj, Aeq = constraints, beq = bvec, ub = upperbound, maximize = TRUE)
+```
+
+Thus, the linear program found that the optimal flow is 1631 minutes, $\approx$ 27 hours, spent on travelling and meeting relatives before heading to $LAX$. With this information, one can plan their trip accordingly. Such analysis shows that maximum flow is a property of a network and can assist in understanding the characteristics of the network. 
+
+***
+#### Analysis of Flight Delays
+***
+
+Delay is normally reflected as the late arrival or departure of inbound or outbound flights. It has the feature that delays on one flight can have an effect on subsequent flights and the airline network as a whole. In general, the delays of upstream flights are the main cause of the delays in downstream flights. Delays can be a cause of:
+
+* Weather - Wind, fog, thunderstorm, low cloud ceiling, etc.
+* Equipment - Air traffic radar/computer outage.
+* Runway - Unavailable because of construction, surface repair, disabled aircraft, etc.
+* Volume - Aircraft movement rate exceeds the capacity of the airport at a given time.
+* Other - Anything excluding weather, volume, runway, and equipment.
+
+Delays add to additional costs, inefficiencies, and unsustainable development. As initially stated in the model assumption, flight deviation is penalized by a cost for each time unit it deviates from the original plan. That is, a flight deviates from its schedule if there is a difference between its planned departure/arrival time and its actual departure/arrival time. It will be assumed that the costs are linear and starting from zero deviation. Moreover, it is assumed that the marginal cost of early differing from the marginal cost of being delayed, typically being delayed is penalized harder than being early. The optimal would be for all flights to be able to depart at the desired time, and hence a cost for being early is added. This can be seen as a penalty for having too many flights active on one part of the taxiway at a given time, making the air traffic controllers' job more difficult.
+
+From this dataset, nearly, 37.3% of all flights during the Summer had a delayed flight, while 0.88% had a cancellation. By analyzing the distribution of categorized flights for all airlines, it reveals that Southwest Airlines Co. had the highest proportion of flight delays, approximately 10.0% all flights, and 46.5% of its total flights. American Airlines, with 5.13% all flights and 34.5% of its total flights, is confirmed to have the second-highest count of flight delays. The airline with the most delay in its total flights is United Air Lines. However, while Southwest Airlines Co. has the most delays, it is not for a long duration when compared to other airlines with delays. The airline's mean delay time is 30 minutes, while American Airlines has an average delay time of 33 minutes. It is Spirit Air Lines that has the longest average delay time of 44 minutes.
+
+```{r echo=FALSE}
+# Proportion
+prop = length(which(flights$departure_delay > 0))/length(flights$departure_delay)
+sprintf("%0.2f percent of flights had a delay during Summer, 2015.", prop*100)
+prop = sum(is.na(flights$departure_delay))/length(flights$departure_delay)
+sprintf("%0.2f percent of flights had a cancellation during Summer, 2015.", prop*100)
+
+names(airlines) = c('airline', 'fullname')
+flights = left_join(flights, airlines, by = "airline")
+```
+
+```{r echo = FALSE}
+cat('Table 5: Total Number of Flights and Delays by Airline
+------------------------------------------------------------------------------------
+        Airlines            | # Flights | # Delays | % Total/Delay | % Airline/Delay
+------------------------------------------------------------------------------------
+American Airlines Inc.      |   231134	|   79748  |      35%      |      5.13%
+Alaska Airlines Inc.        |    48003	|   13166  |      27%      |      0.85%
+JetBlue Airways             |    71893	|   28323  |      39%      |      1.82%
+Delta Air Lines Inc.        |   241634	|   78522  |      32%      |      5.05%
+Atlantic Southeast Airlines |   148241	|   42706  |      29%      |      2.75%
+Frontier Airlines Inc.      |    24880	|    8382  |      34%      |      0.54%
+Hawaiian Airlines Inc.      |    20848	|    6196  |      30%      |      0.40%
+American Eagle Airlines Inc.|    73465	|   22318  |      30%      |      1.44%
+Spirit Air Lines            |    31759	|   15281  |      48%      |      0.98%
+Skywest Airlines Inc.       |   158203	|   46188  |      29%      |      2.97%
+United Air Lines Inc.       |   138541	|   71358  |      52%      |      4.59%
+US Airways Inc.             |    12545	|    4779  |      38%      |      0.31%
+Virgin America              |    16757	|    6417  |      38%      |      0.41%
+Southwest Airlines Co.      |   335476	|  155886  |      46%      |     10.04%
+------------------------------------------------------------------------------------
+                     Total  |  1553379  |  579270  |
+------------------------------------------------------------------------------------')
+```
+
+> Plots of flight delays at take-off, group by airlines
+
+```{r eval=FALSE}
+# Number of flights by different airlines
+flights %>% mutate(delay_group  = case_when(departure_delay == 0 ~ "on-time", departure_delay > 0 ~ "delayed", is.na(departure_delay) == TRUE ~ "cancelled")) %>%
+  ggplot(aes(x = fullname, fill = delay_group)) +
+  geom_bar(stat = "count", position = "dodge") +
+  coord_flip() +
+  theme(legend.position = "top") +
+  scale_fill_manual(values = c("on-time" = "deepskyblue4", "delayed" = "darkorchid1", "cancelled" = "red")) +
+  xlab("Airline") +
+  ylab("Flight Count")
+```
+
+<div align = "center", style = "height:579px">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/delayed_count.jpeg)
+</div>
+
+```{r eval=FALSE}
+ggplot(flights, aes(x= fullname, y = departure_delay, col = fullname)) +
+  geom_jitter(alpha = 0.5, size = 0.3) +
+  coord_flip() +
+  theme(legend.position = "none") + 
+  geom_vline(xintercept = 0) +
+  xlab("Airlines") +
+  ylab("Departure Delay (in minutes)") 
+```
+
+<div align = "center", style = "height:582px">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/delayed_takeoff.jpeg)
+</div>
+
+***
+##### Shortest Path based on Flight Delays 
+***
+
+The shortest path algorithm is used once again to determine to most feasible path from an origin airport to a destination airport. However, the weights, in this case, are the delay time. Therefore, the shortest path will be one with fewer delay times and the algorithm will return an error if no scheduled flight meets the criteria for that specific day.
+
+Querying United Air Lines, JetBlue Airways and Skywest Airlines flights schedule on 20th through 30th June 2015 from Dallas/Fort Worth International Airport (DFW) to Louis Armstrong New Orleans International Airport (MSY), the results below highlight that there are differences between and within each scheduled flight for the day. There were no direct flights from DFW to MSY for any airline. JetBlue's schedule highlights that the best flight path with minimal delay duration is via DFW to BOS to MSY for each day within the period. However, both United Air Lines and Skywest Airlines resulted in different flight schedules for a few dates. Take for instance, United Air Lines, a majority of the flight schedules with less delay were via DFW to ORD to MSY, but on the 21st and 28th, EWR was determined to be the optimal intermediate airport. Similarly, on the 30th, Skywest Airlines' schedule returned DFW to ORD to SLC to MSY as the best path based on delays. Let's investigate these flights path in more depth.
+
+> Shortest Path from DFW to MSY for Three Airlines from June 20th - 30th, 2015
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# United Airlines
+UA = flights[,-c(1,7,10,11,14:15,19,21,22,24:31)] %>% filter(month == 6 & day <= 30 & airline == 'UA')
+# JetBlue
+B6 = flights[,-c(1,7,10,11,14:15,19,21,22,24:31)] %>% filter(month == 6 & day <= 30 & airline == 'B6')
+# Skywest Airline
+OO = flights[,-c(1,7,10,11,14:15,19,21,22,24:31)] %>% filter(month == 6 & day <= 30 & airline == 'OO') 
+```
+
+```{r eval=FALSE}
+# Set airline dataframe a as *DF*, and repeat
+for(i in c(20:30)){
+  df = *DF* %>% filter(day == i)
+  df_connect = data.frame(from = df$origin_airport, to = df$destination_airport, value = df$departure_delay)
+  df_mygraph = simplify(graph.data.frame(df_connect, directed = TRUE))
+  df_DFW_to_MSY = get.shortest.paths(df_mygraph, from = 'DFW', to = 'MSY', weights = df_mygraph$value, output = 'both')
+  print(df_DFW_to_MSY$vpath)
+}
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+cat('Table 6: Routes of shortest path from three airlines
+----------------------------------------------------------
+     Flights from DFW to MSY during June 20-30, 2015
+----------------------------------------------------------
+Date | United Airlines |    JetBlue    |  Skywest Airlines
+----------------------------------------------------------
+20th |   DFW ORD MSY   |  DFW BOS MSY  |    DFW SLC MSY
+21st |  *DFW EWR MSY*  |  DFW BOS MSY  |    DFW SLC MSY
+22nd |   DFW ORD MSY   |  DFW BOS MSY  |    DFW SLC MSY
+23rd |   DFW ORD MSY   |  DFW BOS MSY  |    DFW SLC MSY
+24th |   DFW ORD MSY   |  DFW BOS MSY  |    DFW SLC MSY
+25th |   DFW ORD MSY   |  DFW BOS MSY  |   *DFW IAH MSY*
+26th |   DFW ORD MSY   |  DFW BOS MSY  |    DFW SLC MSY
+27th |   DFW ORD MSY   |  DFW BOS MSY  |   *DFW IAH MSY*
+28th |  *DFW EWR MSY*  |  DFW BOS MSY  |   *DFW IAH MSY*
+29th |   DFW ORD MSY   |  DFW BOS MSY  |   *DFW IAH MSY*
+30th |   DFW ORD MSY   |  DFW BOS MSY  | *DFW ORD SLC MSY*
+----------------------------------------------------------')
+```
+
+There are multiple flight options from an origin to a destination. Using the best flights for United Air Lines as the focus of this explanation, the data reveals that each day United Air Lines travels to both ORD and EWD via DFW, and accordingly, the algorithm indeed returns the optimal opportunity with the shorter delay time. Keep in mind however, that these are solely flights for the assigned day making it improbable to take the equivalent flight more than once. This is explicit because once a flight is taken, some time has elapsed, and cannot go back in time to take the same flight again. Moreover, the distance from DFW to EWR is 1372 miles while DFW to ORD is 802 miles. Therefore, by looking at the directed graph, for June 20th, there were no flights from EWR to MSY, hence the best flight is from DFW to ORD to MSY. For the 21st, it can be readily comprehended why DFW to EWR to MSY is the best flight because the delays are represented as negative values, suggesting that the flight departed sooner than intended and the aircraft can reassuringly cover the additional miles. For the 22nd, the reasoning is that aircraft cannot cover the distance within the extra time despite the delay from ORD to MSY, therefore DFW to ORD to MSY remains the best flight. This is comparable to June 23rd, considering that 14 minutes is not enough time to cover the distance from DFW to MSY via EWR than via ORD.
+
+```{r eval = FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+df = UA %>% filter(origin_airport == 'DFW' | origin_airport == 'ORD' | origin_airport == 'EWR') %>% filter(destination_airport == 'EWR' | destination_airport == 'ORD' | destination_airport == 'MSY') %>% group_by(day, origin_airport, destination_airport) %>% summarise(departure_delay = ifelse(n() > 1, min(departure_delay, na.rm = T), 0)) %>% mutate(x = paste(origin_airport, "-", destination_airport)) %>% filter(day <= 23)
+```
+
+<div align = "center", style = "height:300px">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/shortestpath.jpg)
+</div>
+
+This comparison is another essential way of visualizing the shortest path from an airline's flight schedules by analyzing their departure delays. By interpreting multiple variables, a clearer understanding and decision on how to determine the shortest path can overcome what might seem like the obvious choice.
+
+***
+##### Minimum Cost for Flight Delays
+***
+
+According to the International Air Transport Association, price of fuel, as of May 5th, is US\$2.69 per gallon. To put in perspective, a Boeing 747 tank takes about 63,000 gallons of jet fuel. It consumes roughly \$39.08 to \$43.97 per mile, using approximately \$15,374 in fuel per hour. Therefore, a flight from JFK to LAX is 2475 miles, making Boeing 747 consuming \$96,723 to \$108,825.80 worth of jet fuel each trip. Moreover, this does not include delivery of the fuel and fuel consume during taxiing, which is an average of 3.5 hours a day. The purpose of this section is to formulate a mathematical model to determine how to minimize the cost of flights by scheduling to combat delays.
+
+Airlines consider their stops along a route to ensure they are traveling feasible while also targeting their desired market. If an airline plans to travel to a fixed number of airports along its route, they must travel through all those airports, visiting every point once, and decided whether they will return the same airport hub or not. This can be translated into two mathematical problems:
+
+* A Eulerian path in a graph $G$ is a walk from one vertex to another, that passes through all vertices of $G$ and traverses exactly once every edge of $G$. 
+
+* A Hamiltonian path in a graph $G$ is a walk that includes every vertex of $G$ exactly once. 
+
+It can be model such that there are $n$ airports $a_1, a_2,...,a_n$ and the cost of the path from airline hub to each airport is $c_1, c_2,...,c_n$. Starting at JFK, the airline wants to minimize the cost of traveling while also visiting each of the $n$ airports.
+
+```{r}
+set.seed(13)
+igplot = function(g, weights=FALSE, layout = igraph::layout_as_star, vertex.size = 60, vertex.color = "lightblue",...){
+    g = igraph::graph_from_graphnel(as(g, "graphNEL"))
+    op = par(mar=c(1,1,1,1))
+    if (weights){
+      edge_weight = round(igraph::get.edge.attribute(g, "weight"), 3)  
+      igraph::plot.igraph(g,layout = layout, edge.label = edge_weight, vertex.size = vertex.size, vertex.color = vertex.color, ...)
+    }
+    else
+    igraph::plot.igraph(g,layout = layout, vertex.size = vertex.size, vertex.color = vertex.color, ...)
+    par(op)
+}
+
+edge_weight = c(rep(2505,10), sample(c(2506:5555), 55, replace = TRUE))
+dist = matrix(0,11,11)
+dist[lower.tri(dist)] = edge_weight
+dist[upper.tri(dist)] = t(dist)[upper.tri(dist)]
+
+graph = mk_complete_graph(dist)
+igraph::E(igraph::graph_from_graphnel(graph))
+```
+
+```{r eval = FALSE}
+igplot(graph, weights = TRUE, edge.label.color = "black", vertex.label.cex = 2, vertex.size = 20)
+```
+
+<div align = "center", style = "height:505px">
+![](C:/Users/Deokinanan/OneDrive - CUNY School of Professional Studies/2019 -2021 CUNY SPS/SPRING 2020/DATA 609/Project/completegraph.jpeg)
+</div>
+
+To minimize the cost of traveling, the maximum cost path from the airline hub to some airport should be avoided. Therefore, the cost at the hub to all other airports is set to the same distance, and both the Eulerian and Hamiltonian paths are computed. Note that, `weighted_hpaths()` uses a greedy algorithm to make the first Hamiltonian low weight with weights increasing for successive Hamiltonians. Thus, this is taken care of by setting the initial weight as equal. Moreover, its algorithm uses heuristics, and may not find the overall winner, thus why it is compared to the Eulerian.
+
+```{r message=FALSE, warning=FALSE}
+hpath = weighted_hpaths(dist, matrix = FALSE)
+dist_path = dist2edge(dist) 
+
+euler_ew = eulerian(dist) 
+hamil_ew = weighted_hpaths(dist, matrix=FALSE)
+
+hpath_weights = path_weights(dist_path, hpath[2:12])
+hpath_weights
+
+euler_weights = path_weights(dist_path, euler_ew[2:20])
+euler_weights
+```
+
+By looking closer at the actual path, it is clear why a Eulerian path costs more. In this case, it has to traverse more edges of airports before it tours each node, while the Hamiltonian visits a new airport each step. Via the Eulerian algorithm, by summing the distance from the path, it will cost the airline \$2,044,566.42 to cover all the targeted cites by following the path. While the Hamiltonian algorithm will cost the airline \$1,352,469.25 to cover all the targeted cites by following the path. It is evident that based on the graph, either the Eulerian or the Hamiltonian or even both paths will be satisfied, resulting in the minimum cost. Therefore, using distance as a way of gauging the air time, airlines can schedule flights accordingly to be most profitably.
+
+***
+### Conclusion
+***
+
+In conclusion, this project gave an overview of how network analysis is able to communicate a much more impressive system and abstraction of airline flights, while graph theory supports analysis to be solved more efficiently. However, this project has by no means claimed that the implementation of any algorithm is the most efficient one. The shortest path by elapsed time and flight delays are an approximation. The actual problem can be solved by calculating the shortest path factoring in the availability of a flight at transfer airport plus the wait time for the transfer. This is a more complete approach and this is how humans normally plan their travel. In addition, more variables can be considered to develop an understanding of flight networks because there is never just one factor that affects an aircraft departure, air, and arrival timings.
+
+This project was able to carry out all the objectives. Finding the shortest path between any two airports given multiple time constraints of specific flights was done using the Bellman-Ford algorithm. Understanding flight demand for the perspective of airlines and consumers was determined by changing the maximum flow problem into a linear programming problem. And lastly, optimizing profitability was done by solving for the minimum cost.
+
+Regarding future work, it would be interesting to integrate more variables independently and in combination. This would give an insight into both low-cost and high-cost airlines. Moreover, better processing capabilities will be needed for such an interrogation because it is a massive volume of data. This provides both air traffic controllers, and optimization algorithms a better chance of planning ahead, improving their choices, and obtaining a better solution.
+
+***
+### Works Cited
+***
+
+* Bureau of Transportation Statistics: https://www.bts.gov/
+
+* Dataset Link: https://www.kaggle.com/usdot/flight-delays
+
+* Delling, Daniel & Pajor, Thomas & Wagner, Dorothea & Zaroliagis, Christos. (2009). Efficient Route Planning in Flight Networks. OpenAccess Series in Informatics. 12.
+
+* Farrahi, Amir & Goldberg, Alan & Bagasol, Leonard & Jung, Jaewoo. (2017). Applying Graph Theory to Problems in Air Traffic Management. 10.2514/6.2017-3775.
+
+* Federal Aviation Administration: https://www.faa.gov/
+
+* International Air Transport Association: https://www.iata.org/
+
+* Kalliguddi, Anish & Leboulluec, Aera. (2017). Predictive Modeling of Aircraft Flight Delay. Universal Journal of Management. 5. 485-491. 10.13189/ujm.2017.051003.
+
+* Sternberg, Alice & Soares, Jorge & Carvalho, Diego & Ogasawara, Eduardo. (2017). A Review on Flight Delay Prediction.
+
+
+
