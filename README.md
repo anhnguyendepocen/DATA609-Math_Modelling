@@ -1,1 +1,1 @@
-This repository houses all coded written for Mathematical Modeling Techniques for Data Analytics.
+This repository houses all codes written for Mathematical Modeling Techniques for Data Analytics.
